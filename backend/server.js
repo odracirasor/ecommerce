@@ -1,4 +1,3 @@
-// server.js
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
@@ -7,11 +6,11 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 
-// ✅ Importação de rotas e middlewares
+// Importação de rotas e middlewares
 import authRoutes from './routes/authRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
-import orderRoutes from './routes/orderRoutes.js'; // ✅ Adicionado
+import orderRoutes from './routes/orderRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
 
 // Configurar __dirname para ES Modules
@@ -31,9 +30,13 @@ if (!process.env.DATABASE_URL) {
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Configuração CORS
+// ✅ CORS ajustado para permitir frontend no Render
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173'],
+  origin: [
+    'https://ecommerce-frontend.onrender.com',
+    'http://localhost:3000',
+    'http://localhost:5173'
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -60,7 +63,7 @@ mongoose.connect(process.env.DATABASE_URL, { dbName: 'ecommerce' })
     process.exit(1);
   });
 
-// ✅ Rotas principais
+// Rotas principais
 app.use('/api/auth', authRoutes);         // Registro e login
 app.use('/api/products', productRoutes);  // Produtos
 app.use('/api/upload', uploadRoutes);     // Upload de imagem
@@ -79,6 +82,6 @@ app.get('/', (req, res) => {
 app.use(errorHandler);
 
 // Iniciar o servidor
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
 });

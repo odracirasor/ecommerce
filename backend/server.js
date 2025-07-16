@@ -10,7 +10,6 @@ import { fileURLToPath } from 'url';
 import authRoutes from './routes/authRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
-import orderRoutes from './routes/orderRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
 
 // Configurar __dirname para ES Modules
@@ -30,7 +29,7 @@ if (!process.env.DATABASE_URL) {
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ✅ CORS ajustado para permitir frontend no Render
+// ✅ CORS para frontend local e hospedado
 app.use(cors({
   origin: [
     'https://ecommerce-frontend.onrender.com',
@@ -67,9 +66,8 @@ mongoose.connect(process.env.DATABASE_URL, { dbName: 'ecommerce' })
 app.use('/api/auth', authRoutes);         // Registro e login
 app.use('/api/products', productRoutes);  // Produtos
 app.use('/api/upload', uploadRoutes);     // Upload de imagem
-app.use('/api/orders', orderRoutes);      // Pedidos
 
-// Rota de teste
+// Rota base de teste
 app.get('/', (req, res) => {
   res.json({
     status: 'online',

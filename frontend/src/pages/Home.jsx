@@ -31,7 +31,7 @@ const Home = () => {
   const token = localStorage.getItem("token");
   const isAdmin = localStorage.getItem("isAdmin") === "true";
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -49,8 +49,9 @@ const Home = () => {
         setLoading(false);
       }
     };
-    fetchProducts();
-  }, [API_URL]);
+    if (API_URL) fetchProducts();
+    else setError("API_URL não está definida no ambiente");
+  }, []);
 
   const filtered = products.filter((p) => {
     const matchCategory = category === "All" || p.category === category;

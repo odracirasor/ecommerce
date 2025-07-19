@@ -10,7 +10,10 @@ import { fileURLToPath } from 'url';
 import authRoutes from './routes/authRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
+import userRoutes from './routes/userRoutes.js';
+import orderRoutes1 from './routes/orderRoutes1.js'; // ✅ Importado aqui
 import errorHandler from './middleware/errorHandler.js';
+
 
 // Configurar __dirname para ES Modules
 const __filename = fileURLToPath(import.meta.url);
@@ -66,6 +69,8 @@ mongoose.connect(process.env.DATABASE_URL, { dbName: 'ecommerce' })
 app.use('/api/auth', authRoutes);         // Registro e login
 app.use('/api/products', productRoutes);  // Produtos
 app.use('/api/upload', uploadRoutes);     // Upload de imagem
+app.use('/api/users', userRoutes);        // Usuários
+app.use('/api/orders', orderRoutes1);     // ✅ Pedidos
 
 // Rota base de teste
 app.get('/', (req, res) => {

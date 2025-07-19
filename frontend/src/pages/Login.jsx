@@ -3,15 +3,17 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
-  const [identifier, setIdentifier] = useState(""); // email
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const { login } = useAuth(); // ✅ usa AuthContext
+  const { login } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setError("");
 
     try {
       const res = await fetch("http://localhost:5000/api/auth/login", {
@@ -19,38 +21,38 @@ const Login = () => {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          email: identifier,
-          password
-        })
+        body: JSON.stringify({ email: identifier, password })
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Erro ao fazer login");
+        setError(data.error || "Credenciais inválidas. Verifique seu email e senha.");
         return;
       }
 
-      // Salva no contexto
+      // ✅ Salva o token no localStorage
+      localStorage.setItem("token", data.token);
+
+      // ✅ Confirmação no console
+      const storedToken = localStorage.getItem("token");
+      console.log("Token armazenado:", storedToken);
+
+      // ✅ Salva os dados no contexto
       login({
-        email: identifier,
+        email: data.user?.email,
         token: data.token,
-        isAdmin: data.isAdmin
+        isAdmin: data.user?.isAdmin,
+        _id: data.user?._id,
+        username: data.user?.username,
       });
 
-      setError("");
-
-      // Redireciona dependendo do tipo de usuário
-      if (data.isAdmin) {
-        navigate("/admin");
-      } else {
-        navigate("/profile");
-      }
+      // ✅ Redireciona para /admin ou /profile
+      navigate(data.user?.isAdmin ? "/admin" : "/profile");
 
     } catch (err) {
       console.error("Erro ao conectar:", err);
-      setError("Erro ao conectar com o servidor");
+      setError("Erro ao conectar com o servidor. Tente novamente.");
     }
   };
 
@@ -66,22 +68,33 @@ const Login = () => {
 
       <form onSubmit={handleLogin} className="space-y-4">
         <input
-          type="text"
+          type="email"
           placeholder="Email"
+          autoComplete="email"
           className="w-full border p-2 rounded"
           value={identifier}
           onChange={(e) => setIdentifier(e.target.value)}
           required
         />
 
-        <input
-          type="password"
-          placeholder="Senha"
-          className="w-full border p-2 rounded"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+        <div className="relative">
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="Senha"
+            autoComplete="current-password"
+            className="w-full border p-2 rounded pr-10"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-2 top-2 text-sm text-blue-600"
+          >
+            {showPassword ? "Ocultar" : "Mostrar"}
+          </button>
+        </div>
 
         <button
           type="submit"

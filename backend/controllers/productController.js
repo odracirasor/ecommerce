@@ -1,63 +1,88 @@
 import Product from '../models/Product.js';
+import mongoose from 'mongoose';
 
-// 👉 Criar novo produto
+// ✅ Criar produto
 export const createProduct = async (req, res) => {
   try {
-    const { name, price, description, category, image, author } = req.body;
-
-    if (!name || !price || !description || !category || !image || !author) {
-      return res.status(400).json({ error: 'Todos os campos são obrigatórios.' });
+    // Verifica se o usuário autenticado está presente
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ error: 'Usuário não autenticado' });
     }
 
-    const newProduct = new Product({
-      name,
-      price,
-      description,
-      category,
-      image,
-      author,
-      publishedAt: new Date()
+    const product = new Product({
+      ...req.body,
+      user: req.user._id // ✅ Define o user automaticamente
     });
 
-    const saved = await newProduct.save();
-    res.status(201).json(saved);
+    await product.save();
+    res.status(201).json(product);
   } catch (err) {
-    console.error('Erro ao criar produto:', err);
-    res.status(500).json({ error: 'Erro interno ao criar produto.' });
+    console.error('❌ Erro ao criar produto:', err);
+    res.status(500).json({ error: 'Erro ao criar produto', details: err.message });
   }
 };
 
-// 👉 Listar todos os produtos
+// ✅ Listar todos os produtos
 export const listProducts = async (req, res) => {
   try {
-    const products = await Product.find().sort({ publishedAt: -1 });
+    const products = await Product.find().populate('user', 'name'); // Certifica que 'user' está no schema
     res.json(products);
   } catch (err) {
-    console.error('Erro ao listar produtos:', err);
-    res.status(500).json({ error: 'Erro ao listar produtos.' });
+    console.error('❌ Erro ao listar produtos:', err);
+    res.status(500).json({ error: 'Erro ao listar produtos', details: err.message });
   }
 };
 
-// 👉 Buscar produto por ID
+// ✅ Obter um produto por ID
 export const getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
-    if (!product) return res.status(404).json({ error: 'Produto não encontrado.' });
+    if (!product) {
+      return res.status(404).json({ error: 'Produto não encontrado' });
+    }
     res.json(product);
   } catch (err) {
-    console.error('Erro ao buscar produto:', err);
-    res.status(500).json({ error: 'Erro ao buscar produto.' });
+    console.error('❌ Erro ao buscar produto por ID:', err);
+    res.status(500).json({ error: 'Erro ao buscar produto', details: err.message });
   }
 };
 
-// 👉 Deletar produto
+// ✅ Atualizar um produto
+export const updateProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'ID de produto inválido.' });
+    }
+
+    const updated = await Product.findByIdAndUpdate(id, req.body, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updated) {
+      return res.status(404).json({ error: 'Produto não encontrado para atualizar.' });
+    }
+
+    res.json(updated);
+  } catch (err) {
+    console.error('❌ Erro ao atualizar produto:', err);
+    res.status(500).json({ error: 'Erro ao atualizar produto.', details: err.message });
+  }
+};
+
+// ✅ Deletar um produto
 export const deleteProduct = async (req, res) => {
   try {
     const deleted = await Product.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).json({ error: 'Produto não encontrado para deletar.' });
-    res.json({ message: 'Produto deletado com sucesso.' });
+    if (!deleted) {
+      return res.status(404).json({ error: 'Produto não encontrado' });
+    }
+    res.json({ message: 'Produto removido com sucesso' });
   } catch (err) {
-    console.error('Erro ao deletar produto:', err);
-    res.status(500).json({ error: 'Erro ao deletar produto.' });
+    console.error('❌ Erro ao deletar produto:', err);
+    res.status(500).json({ error: 'Erro ao deletar produto', details: err.message });
   }
 };
+

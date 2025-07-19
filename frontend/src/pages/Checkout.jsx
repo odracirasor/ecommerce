@@ -2,6 +2,12 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 
+const provinciasDeAngola = [
+  "Bengo", "Benguela", "Bié", "Cabinda", "Cuando Cubango", "Cuanza Norte",
+  "Cuanza Sul", "Cunene", "Huambo", "Huíla", "Luanda", "Lunda Norte",
+  "Lunda Sul", "Malanje", "Moxico", "Namibe", "Uíge", "Zaire"
+];
+
 const Checkout = () => {
   const navigate = useNavigate();
   const { cart, clearCart } = useCart();
@@ -11,9 +17,11 @@ const Checkout = () => {
   const [form, setForm] = useState({
     nome: "",
     endereco: "",
+    provincia: "",
     cidade: "",
     postal: "",
     pagamento: "cash",
+    bilhete: "",
   });
 
   const handleChange = (e) => {
@@ -23,25 +31,26 @@ const Checkout = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const { nome, endereco, cidade, postal, pagamento } = form;
-    if (!nome || !endereco || !cidade || !postal) {
-      alert("Por favor, preencha todos os campos.");
+    const { nome, endereco, provincia, cidade, postal, pagamento, bilhete } = form;
+    if (!nome || !endereco || !provincia || !cidade || !postal) {
+      alert("Por favor, preencha todos os campos obrigatórios.");
       return;
     }
 
     const orderData = {
       user: nome,
       items: cart,
-      shipping: { nome, endereco, cidade, postal },
+      shipping: { nome, endereco, provincia, cidade, postal },
       paymentMethod: pagamento,
-      total
+      total,
+      bilhete: bilhete || null,
     };
 
     try {
       const res = await fetch("http://localhost:5000/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderData)
+        body: JSON.stringify(orderData),
       });
 
       if (!res.ok) throw new Error("Erro ao finalizar o pedido.");
@@ -75,21 +84,83 @@ const Checkout = () => {
       </div>
 
       <form className="space-y-4" onSubmit={handleSubmit}>
-        <input type="text" name="nome" placeholder="Nome completo" className="w-full border p-2 rounded" value={form.nome} onChange={handleChange} />
-        <input type="text" name="endereco" placeholder="Endereço" className="w-full border p-2 rounded" value={form.endereco} onChange={handleChange} />
-        <input type="text" name="cidade" placeholder="Cidade" className="w-full border p-2 rounded" value={form.cidade} onChange={handleChange} />
-        <input type="text" name="postal" placeholder="Código Postal" className="w-full border p-2 rounded" value={form.postal} onChange={handleChange} />
+        <input
+          type="text"
+          name="nome"
+          placeholder="Nome completo"
+          className="w-full border p-2 rounded"
+          value={form.nome}
+          onChange={handleChange}
+        />
+        <input
+          type="text"
+          name="endereco"
+          placeholder="Endereço"
+          className="w-full border p-2 rounded"
+          value={form.endereco}
+          onChange={handleChange}
+        />
+
+        {/* ✅ Select de Províncias */}
+        <select
+          name="provincia"
+          className="w-full border p-2 rounded"
+          value={form.provincia}
+          onChange={handleChange}
+        >
+          <option value="">Selecione a província</option>
+          {provinciasDeAngola.map((prov) => (
+            <option key={prov} value={prov}>
+              {prov}
+            </option>
+          ))}
+        </select>
+
+        {/* ✅ Cidade continua como texto livre */}
+        <input
+          type="text"
+          name="cidade"
+          placeholder="Cidade"
+          className="w-full border p-2 rounded"
+          value={form.cidade}
+          onChange={handleChange}
+        />
+        <input
+          type="text"
+          name="postal"
+          placeholder="Código Postal"
+          className="w-full border p-2 rounded"
+          value={form.postal}
+          onChange={handleChange}
+        />
+
+        <input
+          type="text"
+          name="bilhete"
+          placeholder="Nº do Bilhete de Identidade (opcional)"
+          className="w-full border p-2 rounded"
+          value={form.bilhete}
+          onChange={handleChange}
+        />
 
         <div>
           <label className="block mb-1 font-semibold">Método de Pagamento</label>
-          <select name="pagamento" value={form.pagamento} onChange={handleChange} className="w-full border p-2 rounded">
+          <select
+            name="pagamento"
+            value={form.pagamento}
+            onChange={handleChange}
+            className="w-full border p-2 rounded"
+          >
             <option value="cash">Dinheiro na entrega</option>
             <option value="transfer">Transferência bancária</option>
             <option value="mobile">Pagamento por telemóvel</option>
           </select>
         </div>
 
-        <button type="submit" className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">
+        <button
+          type="submit"
+          className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700"
+        >
           Finalizar Pedido
         </button>
       </form>

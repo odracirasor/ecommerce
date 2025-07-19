@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import axios from "axios";
 
 const Cart = () => {
   const { cart, removeFromCart, updateQuantity } = useCart();
+  const [popularProducts, setPopularProducts] = useState([]);
   const navigate = useNavigate();
 
   const total = cart.reduce(
@@ -12,16 +14,44 @@ const Cart = () => {
   );
 
   const handleCheckout = () => {
-    // Opcional: validar antes de ir para o checkout
     navigate("/checkout");
   };
+
+  useEffect(() => {
+    if (cart.length === 0) {
+      // Buscar produtos populares (ex: mais vendidos ou com mais avaliações)
+      axios.get("/api/products/popular")
+        .then(res => setPopularProducts(res.data))
+        .catch(err => console.error("Erro ao buscar produtos populares:", err));
+    }
+  }, [cart]);
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <h2 className="text-2xl font-bold mb-4">🛒 Seu Carrinho</h2>
 
       {cart.length === 0 ? (
-        <p className="text-gray-500">Seu carrinho está vazio.</p>
+        <div>
+          <p className="text-gray-500 mb-4">Seu carrinho está vazio.</p>
+          <h3 className="text-xl font-semibold mb-2">🔥 Produtos populares:</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {popularProducts.map((product) => (
+              <Link
+                to={`/product/${product._id}`}
+                key={product._id}
+                className="border p-4 rounded hover:shadow"
+              >
+                <img
+                  src={product.images?.[0]}
+                  alt={product.name}
+                  className="w-full h-40 object-cover rounded mb-2"
+                />
+                <h4 className="text-lg font-semibold">{product.name}</h4>
+                <p className="text-gray-600">Kz {product.price.toLocaleString()}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
       ) : (
         <>
           {cart.map((item) => (
@@ -75,7 +105,6 @@ const Cart = () => {
             Total Geral: Kz {total.toLocaleString()}
           </div>
 
-          {/* ✅ Botão de Checkout */}
           <div className="mt-6 text-right">
             <button
               onClick={handleCheckout}

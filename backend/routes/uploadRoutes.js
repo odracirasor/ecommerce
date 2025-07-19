@@ -40,8 +40,8 @@ const upload = multer({
   }
 }).single('image');
 
-// Rota de upload de imagem
-router.post('/upload', (req, res) => {
+// ✅ Corrigido: rota agora é POST /api/upload
+router.post('/', (req, res) => {
   upload(req, res, (err) => {
     if (err) {
       console.error("❌ Erro no upload:", err.message);
@@ -58,5 +58,3 @@ router.post('/upload', (req, res) => {
 });
 
 export default router;
-
-

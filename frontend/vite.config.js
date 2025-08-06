@@ -11,7 +11,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    host: true,  // <-- adiciona isso para expor na rede
+    host: true,
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
@@ -21,8 +21,11 @@ export default defineConfig({
     },
   },
   build: {
+    outDir: 'dist',
+    emptyOutDir: true,
     rollupOptions: {
-      input: 'index.html',
-    },
+      input: path.resolve(__dirname, 'index.html')
+    }
   },
+  root: '.', // Explicitly set root directory
 });

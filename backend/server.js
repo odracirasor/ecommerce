@@ -3,135 +3,121 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
-import fs from 'fs';
 import morgan from 'morgan';
 import { fileURLToPath } from 'url';
-import http from 'http'; // ✅ importação correta
-import { Server } from "socket.io";
+import http from 'http';
+import { Server } from 'socket.io';
+import session from 'express-session';
+import MongoStore from 'connect-mongo';
 
-// Rotas
 import authRoutes from './routes/authRoutes.js';
-import messageRoutes from "./routes/messageRoutes.js"
-import productRoutes from './routes/productRoutes.js';
-import uploadRoutes from './routes/uploadRoutes.js';
 import userRoutes from './routes/userRoutes.js';
-import orderRoutes from './routes/orderRoutes.js';
-import adminRoutes from './routes/adminRoutes.js';
-import verifyRoute from './routes/verify1.js';
+import productRoutes from './routes/productRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
+import messageRoutes from './routes/messageRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
+import Message from './models/Message.js';
+import User from './models/User.js'; // IMPORTANTE: modelo User para buscar remetente
 
-// Diretório
+dotenv.config();
+const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// .env
-dotenv.config();
-if (!process.env.DATABASE_URL) {
-  console.error("❌ DATABASE_URL não definida no .env");
-  process.exit(1);
-}
+// Middleware
+app.use(express.json());
+app.use(morgan('dev'));
+app.use(
+  cors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+  })
+);
 
-// Express
-const app = express();
-const PORT = process.env.PORT || 5000;
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({ mongoUrl: process.env.MONGO_URI }),
+    cookie: { httpOnly: true, secure: false, maxAge: 1000 * 60 * 60 * 24 },
+  })
+);
 
-// ✅ CORS
-app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'https://ecommerce-frontend.onrender.com'
-  ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true
-}));
-
-// ✅ Logger
-if (process.env.NODE_ENV !== 'production') {
-  app.use(morgan('dev'));
-}
-
-// ✅ JSON
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// ✅ Uploads
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-app.use('/uploads', express.static(uploadDir));
-
-// ✅ MongoDB
-mongoose.set('debug', true);
-mongoose.connect(process.env.DATABASE_URL, { dbName: 'ecommerce' })
-  .then(() => console.log('✅ Conectado ao MongoDB'))
-  .catch((err) => {
-    console.error('❌ Erro ao conectar ao MongoDB:', err.message);
-    process.exit(1);
-  });
-
-// ✅ Rotas
+// Rotas da API
 app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/upload', uploadRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/', verifyRoute);
+app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
-app.use("/api/messages", messageRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/admin', adminRoutes);
 
-// ✅ Teste
-app.get('/', (req, res) => {
-  res.json({
-    status: '🟢 online',
-    message: 'Servidor rodando com sucesso!',
-    time: new Date()
-  });
-});
+// Uploads estáticos
+app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
 
-// ✅ Middleware de erro
-app.use((err, req, res, next) => {
-  console.error('❌ ERRO:', err.stack);
-  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
-  res.status(statusCode).json({
-    message: err.message,
-    stack: process.env.NODE_ENV === 'production' ? '🚫' : err.stack
-  });
-});
-
-// ✅ Criar servidor HTTP com socket.io
+// Criar servidor HTTP e Socket.IO
 const server = http.createServer(app);
-
 const io = new Server(server, {
   cors: {
-    origin: [
-      "http://localhost:3000",
-      "http://localhost:5173",
-      "https://ecommerce-frontend.onrender.com"
-    ],
-    methods: ["GET", "POST"],
-    credentials: true
+    origin: 'http://localhost:5173',
+    credentials: true,
   },
 });
 
-// ✅ Socket.IO conexão
-io.on("connection", (socket) => {
-  console.log("🟢 Novo cliente conectado:", socket.id);
+// Socket.IO — comunicação em tempo real
+io.on('connection', (socket) => {
+  console.log('Novo cliente conectado:', socket.id);
 
-  socket.on("send_message", (data) => {
-    console.log("📨 Mensagem recebida:", data);
-    io.emit("receive_message", data); // broadcast para todos
+  // Entrar na sala do usuário
+  socket.on('join', (userId) => {
+    socket.join(userId);
+    console.log(`Socket ${socket.id} entrou na sala do usuário ${userId}`);
   });
 
-  socket.on("disconnect", () => {
-    console.log("🔴 Cliente desconectado:", socket.id);
+  // Receber mensagem enviada, salvar e emitir para destinatário e remetente
+  socket.on('sendMessage', async (messageData) => {
+    try {
+      const message = new Message(messageData);
+      await message.save();
+
+      // Buscar dados do remetente para enviar junto
+      const sender = await User.findById(message.senderId).select('name photo email');
+
+      const payload = {
+        ...message.toObject(),
+        sender,
+      };
+
+      // Emitir nova mensagem para o destinatário
+      io.to(message.receiverId).emit('newMessage', payload);
+      // Emitir também para o remetente (atualizar inbox dele)
+      io.to(message.senderId).emit('newMessage', payload);
+
+      console.log(`Mensagem enviada de ${message.senderId} para ${message.receiverId}`);
+    } catch (error) {
+      console.error('Erro ao salvar mensagem ou emitir evento:', error);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Cliente desconectado:', socket.id);
   });
 });
 
-// ✅ Iniciar servidor
-server.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando: http://localhost:${PORT}`);
-});
+// Conectar ao MongoDB e iniciar servidor
+const PORT = process.env.PORT || 5000;
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => {
+    server.listen(PORT, () => {
+      console.log(`Servidor rodando na porta ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('Erro ao conectar ao MongoDB:', err);
+  });

@@ -1,53 +1,16 @@
-import React from "react";
-import { Link } from "react-router-dom";
-
 const Footer = () => {
   return (
-    <footer className="bg-white text-gray-800 py-8 border-t mt-12">
-      <div className="max-w-6xl mx-auto px-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-8 text-sm">
-        <div>
-          <h4 className="font-bold mb-2">Comprar</h4>
-          <ul className="space-y-1">
-            <li><Link to="/ajuda">Ajuda</Link></li>
-            <li><Link to="/ofertas">Ofertas</Link></li>
-            <li><Link to="/lojas">Lojas</Link></li>
-            <li><Link to="/cartoes-presente">Cartões Presente</Link></li>
-          </ul>
-        </div>
-        <div>
-          <h4 className="font-bold mb-2">Vender</h4>
-          <ul className="space-y-1">
-            <li><Link to="/como-vender">Como vender</Link></li>
-            <li><Link to="/taxas">Taxas</Link></li>
-            <li><Link to="/regras">Regras</Link></li>
-          </ul>
-        </div>
-        <div>
-          <h4 className="font-bold mb-2">Empresa</h4>
-          <ul className="space-y-1">
-            <li><Link to="/sobre">Sobre</Link></li>
-            <li><Link to="/politicas">Políticas</Link></li>
-          </ul>
-        </div>
-        <div>
-          <h4 className="font-bold mb-2">Ajuda</h4>
-          <ul className="space-y-1">
-            <li><Link to="/contato">Contato</Link></li>
-            <li><Link to="/reembolso">Política de Reembolso</Link></li>
-          </ul>
-        </div>
-        <div>
-          <h4 className="font-bold mb-2">Conecte-se</h4>
-          <ul className="space-y-1">
-            <li><a href="https://facebook.com" target="_blank" rel="noopener noreferrer">Facebook</a></li>
-            <li><a href="https://twitter.com" target="_blank" rel="noopener noreferrer">Twitter</a></li>
-            <li><a href="https://instagram.com" target="_blank" rel="noopener noreferrer">Instagram</a></li>
-          </ul>
-        </div>
-      </div>
+    <footer className="bg-white border-t border-gray-200 mt-16 text-gray-600 shadow-sm">
+      <div className="max-w-6xl mx-auto px-4 py-8 md:flex md:items-center md:justify-between text-sm">
+        <p className="text-center md:text-left mb-4 md:mb-0">
+          &copy; {new Date().getFullYear()} <strong>BUE Store</strong>. Todos os direitos reservados.
+        </p>
 
-      <div className="mt-8 text-center text-xs text-gray-500">
-        © {new Date().getFullYear()} BUÉ Angola. Todos os direitos reservados.
+        <nav className="flex justify-center md:justify-end gap-6">
+          <a href="/about" className="hover:text-black transition-colors duration-200">Sobre</a>
+          <a href="/contact" className="hover:text-black transition-colors duration-200">Contato</a>
+          <a href="/privacy" className="hover:text-black transition-colors duration-200">Privacidade</a>
+        </nav>
       </div>
     </footer>
   );

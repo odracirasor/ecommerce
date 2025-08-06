@@ -1,127 +1,108 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
 
-const Login = () => {
-  const [identifier, setIdentifier] = useState("");
+export default function LoginPage() {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [isStore, setIsStore] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
 
-  const handleLogin = async (e) => {
+  async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
     try {
-      console.log("📤 Enviando login para:", "http://localhost:5000/api/auth/login");
-      console.log("🧾 Credenciais:", { email: identifier, password });
-
-      const res = await fetch("http://localhost:5000/api/auth/login", {
+      const endpoint = isStore ? "/api/stores/login" : "/api/users/login";
+      const res = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        credentials: "include", // Importante para o refresh token via cookie
-        body: JSON.stringify({ email: identifier, password }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
-
       const data = await res.json();
-      console.log("📥 Resposta recebida:", data);
-      console.log("🔐 Token recebido:", data.token);
+      if (!res.ok) throw new Error(data.error || "Erro ao efetuar login");
 
-      if (!res.ok || !data.token) {
-        setError(data.error || "Credenciais inválidas ou resposta inesperada.");
-        console.warn("⚠️ Erro no login:", data.error || res.status);
-        return;
-      }
-
-      const userInfo = {
-        email: data.user?.email,
-        token: data.token,
-        isAdmin: data.user?.isAdmin,
-        _id: data.user?._id,
-        username: data.user?.username,
-      };
-
-      console.log("✅ Usuário autenticado:", userInfo);
-
-      // Armazena o token localmente para ser usado nas próximas requisições
       localStorage.setItem("token", data.token);
-      console.log("📦 Token armazenado no localStorage");
 
-      login(userInfo);
-
-      navigate(userInfo.isAdmin ? "/admin" : "/profile");
+      navigate(isStore ? "/store/profile" : "/profile");
     } catch (err) {
-      console.error("❌ Erro ao conectar com o backend:", err);
-      setError("Erro ao conectar com o servidor. Tente novamente.");
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-  };
+  }
 
   return (
-    <div className="max-w-md mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">Entrar</h1>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+      <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
+          {isStore ? "Login de Loja" : "Login de Usuário"}
+        </h2>
 
-      {error && (
-        <div className="bg-red-100 text-red-700 p-2 mb-4 rounded border border-red-300">
-          {error}
-        </div>
-      )}
+        {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
-      <form onSubmit={handleLogin} className="space-y-4">
-        <input
-          type="email"
-          placeholder="Email"
-          autoComplete="email"
-          className="w-full border p-2 rounded"
-          value={identifier}
-          onChange={(e) => setIdentifier(e.target.value)}
-          required
-        />
-
-        <div className="relative">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <input
-            type={showPassword ? "text" : "password"}
-            placeholder="Senha"
-            autoComplete="current-password"
-            className="w-full border p-2 rounded pr-10"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            type="email"
+            placeholder="E-mail"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
+
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Senha"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+            >
+              {showPassword ? "Ocultar" : "Mostrar"}
+            </button>
+          </div>
+
           <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-2 top-2 text-sm text-blue-600"
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
           >
-            {showPassword ? "Ocultar" : "Mostrar"}
+            {loading ? "Entrando..." : "Entrar"}
           </button>
+        </form>
+
+        <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
+          <label className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={isStore}
+              onChange={() => setIsStore(!isStore)}
+              className="w-4 h-4"
+            />
+            <span>Entrar como Loja</span>
+          </label>
+          <Link to="/forgot-password" className="text-blue-600 hover:underline">
+            Esqueceu a senha?
+          </Link>
         </div>
 
-        <button
-          type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full"
-        >
-          Entrar
-        </button>
-      </form>
-
-      <div className="mt-4 text-sm text-center text-gray-600 space-y-2">
-        <Link to="/forgot-password" className="text-blue-600 hover:underline">
-          Esqueceu a senha?
-        </Link>
-        <br />
-        <span>
-          Não tem uma conta?{" "}
+        <p className="text-center text-gray-600 text-sm mt-6">
+          Não tem conta?{" "}
           <Link to="/register" className="text-blue-600 hover:underline">
-            Registre-se
+            Criar conta
           </Link>
-        </span>
+        </p>
       </div>
     </div>
   );
-};
-
-export default Login;
+}

@@ -3,17 +3,19 @@ import {
   sendMessage,
   getInbox,
   getMessageById,
-  getConversationBetweenUsers // ✅ novo
+  getConversationBetweenUsers,
+  getRoomHistory,
 } from "../controllers/messageController.js";
-import { verifyToken } from "../middleware/authMiddleware.js"; // ✅ correto
+import { requireAuth } from "../middleware/authMiddleware.js"; // ✅ Sessão
 
 const router = express.Router();
 
-router.post("/", verifyToken, sendMessage);
-router.get("/", verifyToken, getInbox);
-
-// ✅ a rota específica vem ANTES da rota dinâmica
-router.get("/conversation/:userId", verifyToken, getConversationBetweenUsers);
-router.get("/:id", verifyToken, getMessageById);
+// ✅ Usar requireAuth em todas as rotas protegidas
+router.post("/", requireAuth, sendMessage);
+router.get("/", requireAuth, getInbox);
+router.get("/conversation/:userId", requireAuth, getConversationBetweenUsers);
+router.get("/history/:roomId", requireAuth, getRoomHistory);
+router.get("/:id", requireAuth, getMessageById);
 
 export default router;
+

@@ -1,36 +1,37 @@
 import express from 'express';
-import Order from '../models/orderModel.js';
-import { verifyToken1 } from '../middleware/verifyToken1.js';
+import {
+  createOrder,
+  getOrdersByUserId,
+  getOrderById,
+  confirmOrder,
+  markPaymentAsUnconfirmed,
+  getOrdersBySellerId,
+  markOrderAsCompleted,
+} from '../controllers/orderController.js';
+
+import { requireAuth } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// Criar um novo pedido (checkout)
-router.post('/', verifyToken1, async (req, res) => {
-  try {
-    const {
-      user,
-      items,
-      shipping,
-      paymentMethod,
-      total,
-      bilhete,
-    } = req.body;
+// 📦 Criar novo pedido
+router.post('/', requireAuth, createOrder);
 
-    const newOrder = new Order({
-      user,
-      items,
-      shipping,
-      paymentMethod,
-      total,
-      bilhete,
-    });
+// 📄 Obter pedidos de um usuário específico
+router.get('/user/:userId', requireAuth, getOrdersByUserId);
 
-    const savedOrder = await newOrder.save();
-    res.status(201).json(savedOrder);
-  } catch (err) {
-    console.error('Erro ao salvar pedido:', err);
-    res.status(500).json({ message: 'Erro ao salvar pedido' });
-  }
-});
+// 📄 Obter pedidos de um vendedor específico
+router.get('/seller/:sellerId', requireAuth, getOrdersBySellerId);
+
+// 🔍 Obter pedido por ID
+router.get('/:orderId', requireAuth, getOrderById);
+
+// ✅ Confirmar pagamento
+router.put('/confirm/:orderId', requireAuth, confirmOrder);
+
+// ❌ Marcar pagamento como não confirmado
+router.put('/unconfirmed/:orderId', requireAuth, markPaymentAsUnconfirmed);
+
+// ✅ Marcar pedido como concluído
+router.put('/completed/:orderId', requireAuth, markOrderAsCompleted);
 
 export default router;

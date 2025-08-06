@@ -1,147 +1,162 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import api from "../api";
 
-const Register = () => {
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+export default function Register() {
+  const [form, setForm] = useState({
+    name: "",
+    username: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const navigate = useNavigate();
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const validateField = (name, value) => {
+    let error = "";
+    if (!value.trim()) error = "Campo obrigatório";
+    else if (name === "email" && !/\S+@\S+\.\S+/.test(value)) error = "Email inválido";
+    else if (name === "password" && value.length < 6) error = "Mínimo 6 caracteres";
+    else if (name === "confirmPassword" && value !== form.password) error = "Senhas não coincidem";
+    return error;
+  };
 
-  const handleRegister = async (e) => {
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+
+    // Validação em tempo real
+    setErrors((prev) => ({
+      ...prev,
+      [name]: validateField(name, value),
+    }));
+
+    if (name === "confirmPassword" || name === "password") {
+      setErrors((prev) => ({
+        ...prev,
+        confirmPassword: validateField("confirmPassword", name === "confirmPassword" ? value : form.confirmPassword),
+      }));
+    }
+  };
+
+  const isFormValid = () => {
+    const newErrors = {};
+    Object.keys(form).forEach((field) => {
+      newErrors[field] = validateField(field, form[field]);
+    });
+    setErrors(newErrors);
+    return !Object.values(newErrors).some((err) => err);
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setSuccessMessage("");
+    if (!isFormValid()) return;
 
-    if (password.length < 6) {
-      setError("A senha deve ter no mínimo 6 caracteres.");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("As senhas não coincidem.");
-      return;
-    }
-
+    setLoading(true);
     try {
-      setIsSubmitting(true);
-      const response = await fetch(`${API_URL}/api/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, password })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (data.error && data.error.includes("username")) {
-          setError("⚠️ Nome de usuário já está em uso.");
-        } else if (data.error && data.error.includes("email")) {
-          setError("⚠️ E-mail já está em uso.");
-        } else {
-          setError(data.error || "Erro ao registrar.");
-        }
-        return;
-      }
-
-      setSuccessMessage("✅ Conta criada! Verifique seu e-mail para confirmar.");
-      setTimeout(() => navigate("/login"), 4000);
-    } catch (err) {
-      console.error("Erro de rede:", err);
-      setError("Erro de rede. Tente novamente.");
+      await api.post("/register", form);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000); // animação de sucesso desaparece após 3s
+    } catch {
+      setErrors({ global: "Erro ao registrar. Tente novamente." });
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">Registre-se</h1>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+      <div className="bg-white w-full max-w-md rounded-lg shadow-lg p-8 relative overflow-hidden">
+        {success && (
+          <div className="absolute inset-0 flex items-center justify-center bg-green-100 animate-fade-in">
+            <div className="bg-white rounded-full p-6 shadow-lg animate-bounce">
+              <svg
+                className="w-12 h-12 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          </div>
+        )}
 
-      {error && (
-        <div className="bg-red-100 text-red-700 p-2 mb-4 rounded border border-red-300">
-          {error}
-        </div>
-      )}
+        <h2 className="text-2xl font-bold text-center mb-6">Criar Conta</h2>
 
-      {successMessage && (
-        <div className="bg-green-100 text-green-700 p-2 mb-4 rounded border border-green-300">
-          {successMessage}
-        </div>
-      )}
+        {errors.global && <p className="text-center text-red-500 mb-4">{errors.global}</p>}
 
-      <form onSubmit={handleRegister} className="space-y-4">
-        <input
-          type="text"
-          placeholder="Nome de usuário"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className={`w-full border p-2 rounded ${
-            error.toLowerCase().includes("usuário") ? "border-red-500" : ""
-          }`}
-          required
-        />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {["name", "username", "email"].map((field) => (
+            <div key={field}>
+              <input
+                name={field}
+                placeholder={field === "name" ? "Nome completo" : field === "username" ? "Nome de usuário" : "Email"}
+                type={field === "email" ? "email" : "text"}
+                value={form[field]}
+                onChange={handleChange}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none ${
+                  errors[field] ? "border-red-500" : "border-gray-300"
+                }`}
+              />
+              {errors[field] && <p className="text-red-500 text-sm mt-1">{errors[field]}</p>}
+            </div>
+          ))}
 
-        <input
-          type="email"
-          placeholder="E-mail"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className={`w-full border p-2 rounded ${
-            error.toLowerCase().includes("e-mail") ? "border-red-500" : ""
-          }`}
-          required
-        />
+          <div className="relative">
+            <input
+              name="password"
+              type={showPassword ? "text" : "password"}
+              placeholder="Senha"
+              value={form.password}
+              onChange={handleChange}
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none ${
+                errors.password ? "border-red-500" : "border-gray-300"
+              }`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+            >
+              {showPassword ? "Ocultar" : "Mostrar"}
+            </button>
+            {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
+          </div>
 
-        <div className="relative">
-          <input
-            type={showPassword ? "text" : "password"}
-            placeholder="Senha"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={`w-full border p-2 rounded ${
-              error.toLowerCase().includes("senha") ? "border-red-500" : ""
-            }`}
-            required
-          />
+          <div>
+            <input
+              name="confirmPassword"
+              type="password"
+              placeholder="Confirmar senha"
+              value={form.confirmPassword}
+              onChange={handleChange}
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none ${
+                errors.confirmPassword ? "border-red-500" : "border-gray-300"
+              }`}
+            />
+            {errors.confirmPassword && <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>}
+          </div>
+
           <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute top-2 right-3 text-sm text-blue-600 hover:underline"
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
           >
-            {showPassword ? "Ocultar" : "Mostrar"}
+            {loading ? "Registrando..." : "Registrar"}
           </button>
-        </div>
+        </form>
 
-        <input
-          type={showPassword ? "text" : "password"}
-          placeholder="Confirmar Senha"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          className={`w-full border p-2 rounded ${
-            error.toLowerCase().includes("coincidem") ? "border-red-500" : ""
-          }`}
-          required
-        />
-
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className={`bg-blue-600 text-white px-4 py-2 rounded w-full ${
-            isSubmitting ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-700"
-          }`}
-        >
-          {isSubmitting ? "Criando..." : "Criar Conta"}
-        </button>
-      </form>
+        <p className="text-center text-gray-600 text-sm mt-6">
+          Já tem conta?{" "}
+          <Link to="/login" className="text-blue-600 hover:underline">
+            Faça login
+          </Link>
+        </p>
+      </div>
     </div>
   );
-};
-
-export default Register;
+}

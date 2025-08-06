@@ -1,29 +1,30 @@
 import Message from "../models/Message.js";
 
+// 🧪 Middleware de mock (pode mover para um middleware separado)
+const mockUser = {
+  _id: "68776571bec5f5970d09eb2f",
+  username: "Ricardo Rosa",
+};
+
 // ✅ Enviar mensagem
 export const sendMessage = async (req, res) => {
   try {
-    const { recipientId, content } = req.body;
+    req.user = mockUser;
 
-    console.log("\n📨 Enviando nova mensagem...");
-    console.log("🔐 Usuário autenticado:", req.user?._id);
-    console.log("🔸 Para:", recipientId);
-    console.log("🔸 Conteúdo:", content);
+    const { recipientId, content, room } = req.body;
 
-    if (!recipientId || !content) {
-      console.warn("⚠️ Dados ausentes. recipientId ou content estão faltando.");
-      return res.status(400).json({ error: "Destinatário e conteúdo são obrigatórios." });
+    if (!recipientId || !content || !room) {
+      return res.status(400).json({ error: "recipientId, content e room são obrigatórios." });
     }
 
     const newMessage = new Message({
       sender: req.user._id,
       receiver: recipientId,
-      text: content,
+      content,
+      room,
     });
 
     await newMessage.save();
-    console.log("✅ Mensagem salva com sucesso. ID:", newMessage._id);
-
     res.status(201).json(newMessage);
   } catch (error) {
     console.error("❌ Erro ao enviar mensagem:", error);
@@ -31,76 +32,87 @@ export const sendMessage = async (req, res) => {
   }
 };
 
-// ✅ Ver inbox (mensagens recebidas)
+// ✅ Obter inbox (mensagens recebidas)
 export const getInbox = async (req, res) => {
   try {
-    console.log("\n📥 Acessando inbox...");
-    console.log("🔐 Usuário autenticado:", req.user?._id);
+    req.user = mockUser;
 
     const messages = await Message.find({ receiver: req.user._id })
-      .populate("sender", "name email")
+      .populate("sender", "username email _id")
       .sort({ createdAt: -1 });
-
-    console.log(`📦 ${messages.length} mensagens encontradas na inbox de ${req.user._id}`);
 
     res.json(messages);
   } catch (error) {
     console.error("❌ Erro ao buscar inbox:", error);
-    res.status(500).json({ error: "Erro ao buscar mensagens da caixa de entrada." });
+    res.status(500).json({ error: "Erro ao buscar inbox." });
   }
 };
 
-// ✅ Ver mensagem por ID
+// ✅ Obter mensagem por ID
 export const getMessageById = async (req, res) => {
   try {
-    console.log("\n🔎 Buscando mensagem por ID...");
-    console.log("🔐 Usuário autenticado:", req.user?._id);
-    console.log("📨 ID da mensagem:", req.params.id);
+    req.user = mockUser;
 
-    const message = await Message.findById(req.params.id).populate("sender", "name email");
+    const message = await Message.findById(req.params.id)
+      .populate("sender", "username email _id")
+      .populate("receiver", "username email _id");
 
     if (!message) {
-      console.warn("⚠️ Mensagem não encontrada:", req.params.id);
       return res.status(404).json({ error: "Mensagem não encontrada." });
     }
 
-    if (message.receiver.toString() === req.user._id.toString()) {
+    if (message.receiver._id.toString() === req.user._id.toString()) {
       message.read = true;
       await message.save();
-      console.log("📬 Mensagem marcada como lida.");
-    } else {
-      console.warn("🚫 Tentativa de acessar mensagem que não pertence ao usuário.");
     }
 
     res.json(message);
   } catch (error) {
-    console.error("❌ Erro ao buscar mensagem por ID:", error);
+    console.error("❌ Erro ao buscar mensagem:", error);
     res.status(500).json({ error: "Erro ao buscar mensagem." });
   }
 };
 
-// ✅ Buscar conversa entre dois usuários
+// ✅ Obter conversa entre dois usuários
 export const getConversationBetweenUsers = async (req, res) => {
   try {
+    req.user = mockUser;
+
     const userId1 = req.user._id;
     const userId2 = req.params.userId;
-
-    console.log("\n💬 Buscando conversa entre usuários...");
-    console.log("👤 Usuário atual:", userId1);
-    console.log("👤 Outro participante:", userId2);
 
     const messages = await Message.find({
       $or: [
         { sender: userId1, receiver: userId2 },
         { sender: userId2, receiver: userId1 },
       ],
-    }).sort({ createdAt: 1 });
-
-    console.log(`📜 ${messages.length} mensagens encontradas na conversa.`);
+    })
+      .sort({ createdAt: 1 })
+      .populate("sender", "username _id")
+      .populate("receiver", "username _id");
 
     res.json(messages);
   } catch (error) {
     console.error("❌ Erro ao buscar conversa:", error);
     res.status(500).json({ error: "Erro ao buscar conversa entre os usuários." });
+  }
+};
+
+// ✅ Obter histórico de uma sala de chat
+export const getRoomHistory = async (req, res) => {
+  try {
+    req.user = mockUser;
+
+    const { roomId } = req.params;
+
+    const messages = await Message.find({ room: roomId })
+      .sort({ createdAt: 1 })
+      .populate("sender", "username _id")
+      .populate("receiver", "username _id");
+
+    res.json(messages);
+  } catch (error) {
+    console.error("❌ Erro ao carregar histórico da sala:", error);
+    res.status(500).json({ error: "Erro ao carregar histórico da sala." });
   }
 };

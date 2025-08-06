@@ -1,68 +1,44 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect } from "react";
 
-const AuthContext = createContext();
+export const AuthContext = createContext(null);
 
-export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(null);
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem("userInfo");
-
-    if (stored) {
-      const userInfo = JSON.parse(stored);
-      setCurrentUser({
-        email: userInfo.email,
-        isAdmin: userInfo.isAdmin,
-        _id: userInfo._id,
-        username: userInfo.username,
-        token: userInfo.token,
-      });
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        setUser({
+          role: payload.role || "user",
+          isStore: payload.isStore || false,
+          token
+        });
+      } catch {
+        setUser(null);
+      }
     }
   }, []);
 
-  const login = ({ email, token, isAdmin, _id, username }) => {
-    const userInfo = { email, token, isAdmin, _id, username };
-    localStorage.setItem("userInfo", JSON.stringify(userInfo));
-    setCurrentUser({ ...userInfo });
+  const login = (token) => {
+    localStorage.setItem("token", token);
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    setUser({
+      role: payload.role || "user",
+      isStore: payload.isStore || false,
+      token
+    });
   };
 
   const logout = () => {
-    localStorage.removeItem("userInfo");
-    setCurrentUser(null);
-  };
-
-  const refreshToken = async () => {
-    try {
-      const res = await fetch("http://localhost:5000/api/auth/refresh", {
-        method: "POST",
-        credentials: "include", // Envia o refresh token como cookie
-      });
-
-      if (!res.ok) throw new Error("Falha ao renovar token");
-
-      const data = await res.json();
-      if (!data.token) throw new Error("Token ausente na resposta");
-
-      const updatedUser = {
-        ...currentUser,
-        token: data.token,
-      };
-
-      setCurrentUser(updatedUser);
-      localStorage.setItem("userInfo", JSON.stringify(updatedUser));
-
-      return data.token;
-    } catch (err) {
-      logout();
-      throw err;
-    }
+    localStorage.removeItem("token");
+    setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, login, logout, refreshToken }}>
+    <AuthContext.Provider value={{ user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => useContext(AuthContext);
+}

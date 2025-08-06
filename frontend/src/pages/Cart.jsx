@@ -19,10 +19,12 @@ const Cart = () => {
 
   useEffect(() => {
     if (cart.length === 0) {
-      // Buscar produtos populares (ex: mais vendidos ou com mais avaliações)
-      axios.get("/api/products/popular")
-        .then(res => setPopularProducts(res.data))
-        .catch(err => console.error("Erro ao buscar produtos populares:", err));
+      axios
+        .get("/api/products/popular")
+        .then((res) => setPopularProducts(res.data))
+        .catch((err) =>
+          console.error("Erro ao buscar produtos populares:", err)
+        );
     }
   }, [cart]);
 
@@ -42,12 +44,14 @@ const Cart = () => {
                 className="border p-4 rounded hover:shadow"
               >
                 <img
-                  src={product.images?.[0]}
+                  src={product.image || "/placeholder.jpg"}
                   alt={product.name}
                   className="w-full h-40 object-cover rounded mb-2"
                 />
                 <h4 className="text-lg font-semibold">{product.name}</h4>
-                <p className="text-gray-600">Kz {product.price.toLocaleString()}</p>
+                <p className="text-gray-600">
+                  Kz {product.price?.toLocaleString() || "N/A"}
+                </p>
               </Link>
             ))}
           </div>
@@ -59,13 +63,27 @@ const Cart = () => {
               key={item._id}
               className="flex items-center justify-between border-b py-4"
             >
-              <div>
-                <Link to={`/product/${item._id}`} className="text-blue-600 font-semibold hover:underline">
+              <Link to={`/product/${item._id}`}>
+                <img
+                  src={item.image || "/placeholder.jpg"}
+                  alt={item.name}
+                  className="w-24 h-24 object-cover rounded mr-4"
+                />
+              </Link>
+
+              <div className="flex-1">
+                <Link
+                  to={`/product/${item._id}`}
+                  className="text-blue-600 font-semibold hover:underline"
+                >
                   <h3 className="text-lg">{item.name}</h3>
                 </Link>
-                <p className="text-sm text-gray-600">Categoria: {item.category}</p>
                 <p className="text-sm text-gray-600">
-                  Preço Unitário: <strong>Kz {item.price.toLocaleString()}</strong>
+                  Categoria: {item.category}
+                </p>
+                <p className="text-sm text-gray-600">
+                  Preço Unitário:{" "}
+                  <strong>Kz {item.price.toLocaleString()}</strong>
                 </p>
 
                 <div className="flex items-center gap-2 mt-2">

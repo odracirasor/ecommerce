@@ -30,65 +30,79 @@ const Vendas = () => {
     return venda.status === filtro;
   });
 
-  return (
-    <div className="max-w-4xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Minhas Vendas</h1>
+  const formatPrice = (price) => {
+    const value = Math.max(price, 0);
+    return value.toLocaleString("pt-AO", {
+      style: "currency",
+      currency: "AOA",
+      minimumFractionDigits: 2,
+    });
+  };
 
-      <div className="mb-4 flex gap-2">
-        <button
-          className={`px-4 py-2 rounded ${filtro === "todas" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
-          onClick={() => setFiltro("todas")}
-        >
-          Todas
-        </button>
-        <button
-          className={`px-4 py-2 rounded ${filtro === "pending" ? "bg-yellow-500 text-white" : "bg-gray-200"}`}
-          onClick={() => setFiltro("pending")}
-        >
-          Pendentes
-        </button>
-        <button
-          className={`px-4 py-2 rounded ${filtro === "completed" ? "bg-green-600 text-white" : "bg-gray-200"}`}
-          onClick={() => setFiltro("completed")}
-        >
-          Completadas
-        </button>
-        <button
-          className={`px-4 py-2 rounded ${filtro === "failed" ? "bg-red-500 text-white" : "bg-gray-200"}`}
-          onClick={() => setFiltro("failed")}
-        >
-          Falhadas
-        </button>
+  return (
+    <div className="max-w-5xl mx-auto p-6">
+      <h1 className="text-3xl font-bold mb-6 text-center">📦 Minhas Vendas</h1>
+
+      <div className="mb-6 flex flex-wrap justify-center gap-3">
+        {["todas", "pending", "completed", "failed"].map((status) => {
+          const label = {
+            todas: "Todas",
+            pending: "Pendentes",
+            completed: "Completadas",
+            failed: "Falhadas",
+          }[status];
+
+          const color = {
+            todas: "bg-blue-500",
+            pending: "bg-yellow-500",
+            completed: "bg-green-600",
+            failed: "bg-red-500",
+          }[status];
+
+          return (
+            <button
+              key={status}
+              className={`px-5 py-2 rounded-full font-medium shadow ${
+                filtro === status
+                  ? `${color} text-white`
+                  : "bg-gray-200 text-gray-700"
+              }`}
+              onClick={() => setFiltro(status)}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       {loading ? (
-        <p>Carregando...</p>
+        <p className="text-center">🔄 Carregando...</p>
       ) : vendasFiltradas.length === 0 ? (
-        <p>Nenhuma venda encontrada.</p>
+        <p className="text-center text-gray-600">Nenhuma venda encontrada.</p>
       ) : (
-        <ul className="space-y-4">
+        <ul className="space-y-6">
           {vendasFiltradas.map((venda) => (
-            <li key={venda._id} className="p-4 border rounded shadow">
-              <div className="flex justify-between items-center">
+            <li key={venda._id} className="p-5 border rounded-xl shadow-md bg-white">
+              <div className="flex justify-between flex-col sm:flex-row sm:items-center gap-3">
                 <div>
-                  <p className="font-semibold text-lg">{venda.product.title}</p>
-                  <p>Preço: {(venda.product.price / 100).toFixed(2)} Kz</p>
-                  <p>Comprador: {venda.buyer?.name || "Anônimo"}</p>
-                  <p>Status: <span className="font-semibold capitalize">{venda.status}</span></p>
-                  <p className="text-sm text-gray-500">Data: {new Date(venda.createdAt).toLocaleString()}</p>
+                  <h2 className="text-xl font-semibold">{venda.product.title}</h2>
+                  <p className="text-gray-700">💰 Preço: {formatPrice(venda.product.price / 100)}</p>
+                  <p>👤 Comprador: {venda.buyer?.name || "Anônimo"}</p>
+                  <p>Status: <span className="capitalize font-medium">{venda.status}</span></p>
+                  <p className="text-sm text-gray-500">📅 {new Date(venda.createdAt).toLocaleString()}</p>
                 </div>
 
-                {venda.status === "failed" && (
-                  <p className="text-red-600 font-bold">Reembolsado</p>
-                )}
-
-                {venda.status === "pending" && (
-                  <p className="text-yellow-700 font-semibold">Aguardando confirmação do comprador</p>
-                )}
-
-                {venda.status === "completed" && (
-                  <p className="text-green-700 font-semibold">Venda confirmada!</p>
-                )}
+                <div className="text-right">
+                  {venda.status === "failed" && (
+                    <p className="text-red-600 font-bold">Reembolsado</p>
+                  )}
+                  {venda.status === "pending" && (
+                    <p className="text-yellow-600 font-semibold">Aguardando confirmação</p>
+                  )}
+                  {venda.status === "completed" && (
+                    <p className="text-green-600 font-semibold">Venda confirmada!</p>
+                  )}
+                </div>
               </div>
             </li>
           ))}

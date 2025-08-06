@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
 
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
@@ -34,7 +35,7 @@ const AdminUsers = () => {
   };
 
   const suspendUser = async (id) => {
-    if (!window.confirm('Suspender este usuário?')) return;
+    if (!window.confirm('⚠️ Suspender este usuário?')) return;
     try {
       await axios.put(`/api/admin/users/${id}/suspend`, {}, {
         headers: { Authorization: `Bearer ${token}` }
@@ -46,50 +47,69 @@ const AdminUsers = () => {
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Gerenciar Usuários</h1>
+    <div className="p-6 max-w-6xl mx-auto">
+      <h1 className="text-3xl font-bold mb-6 text-gray-800">👥 Gerenciar Usuários</h1>
 
       <input
         type="text"
-        placeholder="🔍 Buscar por nome..."
+        placeholder="🔍 Buscar por nome ou email..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="mb-4 p-2 border rounded w-full max-w-md"
+        className="mb-6 p-3 border border-gray-300 rounded w-full max-w-md focus:outline-none focus:ring focus:border-blue-400"
       />
 
-      <table className="w-full bg-white shadow rounded-lg overflow-hidden">
-        <thead className="bg-gray-200">
-          <tr>
-            <th className="p-3 text-left">Nome</th>
-            <th className="p-3 text-left">Email</th>
-            <th className="p-3 text-left">Admin</th>
-            <th className="p-3 text-left">Suspenso</th>
-            <th className="p-3 text-left">Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((u) => (
-            <tr key={u._id} className="border-b">
-              <td className="p-3">{u.name}</td>
-              <td className="p-3">{u.email}</td>
-              <td className="p-3">{u.isAdmin ? '✅' : '❌'}</td>
-              <td className="p-3">{u.suspended ? '🚫' : '✔️'}</td>
-              <td className="p-3 flex gap-2">
-                {!u.isAdmin && (
-                  <button onClick={() => promoteToAdmin(u._id)} className="text-blue-500 hover:underline">
-                    Tornar Admin
-                  </button>
-                )}
-                {!u.suspended && (
-                  <button onClick={() => suspendUser(u._id)} className="text-red-500 hover:underline">
-                    Suspender
-                  </button>
-                )}
-              </td>
+      <div className="overflow-x-auto rounded-lg shadow">
+        <table className="w-full bg-white border border-gray-200">
+          <thead className="bg-gray-100 text-gray-700">
+            <tr>
+              <th className="p-4 text-left">👤 Nome</th>
+              <th className="p-4 text-left">📧 Email</th>
+              <th className="p-4 text-center">🔐 Admin</th>
+              <th className="p-4 text-center">🚫 Suspenso</th>
+              <th className="p-4 text-center">⚙️ Ações</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {users.map((u) => (
+              <tr key={u._id} className="border-t hover:bg-gray-50 transition">
+                <td className="p-4">
+                  <Link to={`/profile/${u._id}`} className="text-blue-600 hover:underline">
+                    {u.name}
+                  </Link>
+                </td>
+                <td className="p-4">{u.email}</td>
+                <td className="p-4 text-center">{u.isAdmin ? '✅' : '❌'}</td>
+                <td className="p-4 text-center">{u.suspended ? '🚫' : '✔️'}</td>
+                <td className="p-4 text-center space-x-2">
+                  {!u.isAdmin && (
+                    <button
+                      onClick={() => promoteToAdmin(u._id)}
+                      className="px-3 py-1 text-sm text-white bg-blue-500 hover:bg-blue-600 rounded"
+                    >
+                      Tornar Admin
+                    </button>
+                  )}
+                  {!u.suspended && (
+                    <button
+                      onClick={() => suspendUser(u._id)}
+                      className="px-3 py-1 text-sm text-white bg-red-500 hover:bg-red-600 rounded"
+                    >
+                      Suspender
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {users.length === 0 && (
+              <tr>
+                <td colSpan="5" className="text-center p-6 text-gray-500">
+                  Nenhum usuário encontrado.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

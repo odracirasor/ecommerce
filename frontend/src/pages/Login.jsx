@@ -8,7 +8,6 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
-
   const { login } = useAuth();
 
   const handleLogin = async (e) => {
@@ -16,42 +15,47 @@ const Login = () => {
     setError("");
 
     try {
+      console.log("📤 Enviando login para:", "http://localhost:5000/api/auth/login");
+      console.log("🧾 Credenciais:", { email: identifier, password });
+
       const res = await fetch("http://localhost:5000/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ email: identifier, password })
+        credentials: "include", // Importante para o refresh token via cookie
+        body: JSON.stringify({ email: identifier, password }),
       });
 
       const data = await res.json();
+      console.log("📥 Resposta recebida:", data);
+      console.log("🔐 Token recebido:", data.token);
 
-      if (!res.ok) {
-        setError(data.error || "Credenciais inválidas. Verifique seu email e senha.");
+      if (!res.ok || !data.token) {
+        setError(data.error || "Credenciais inválidas ou resposta inesperada.");
+        console.warn("⚠️ Erro no login:", data.error || res.status);
         return;
       }
 
-      // ✅ Salva o token no localStorage
-      localStorage.setItem("token", data.token);
-
-      // ✅ Confirmação no console
-      const storedToken = localStorage.getItem("token");
-      console.log("Token armazenado:", storedToken);
-
-      // ✅ Salva os dados no contexto
-      login({
+      const userInfo = {
         email: data.user?.email,
         token: data.token,
         isAdmin: data.user?.isAdmin,
         _id: data.user?._id,
         username: data.user?.username,
-      });
+      };
 
-      // ✅ Redireciona para /admin ou /profile
-      navigate(data.user?.isAdmin ? "/admin" : "/profile");
+      console.log("✅ Usuário autenticado:", userInfo);
 
+      // Armazena o token localmente para ser usado nas próximas requisições
+      localStorage.setItem("token", data.token);
+      console.log("📦 Token armazenado no localStorage");
+
+      login(userInfo);
+
+      navigate(userInfo.isAdmin ? "/admin" : "/profile");
     } catch (err) {
-      console.error("Erro ao conectar:", err);
+      console.error("❌ Erro ao conectar com o backend:", err);
       setError("Erro ao conectar com o servidor. Tente novamente.");
     }
   };

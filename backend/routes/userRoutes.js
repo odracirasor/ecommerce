@@ -1,61 +1,28 @@
 import express from 'express';
-import User from '../models/User.js';
-import authMiddleware from '../middleware/authMiddleware.js';
+import {
+  getMe,
+  updateMe,
+  getUserById,
+  getUserBalance,
+  sendMessageToUser,
+} from '../controllers/userController.js';
+import { getInbox } from '../controllers/messageController.js';
+import { verifyToken1 } from '../middleware/verifyToken1.js';
 
 const router = express.Router();
 
-/**
- * @route   GET /api/users/me
- * @desc    Retorna os dados do usuário autenticado
- * @access  Privado
- */
-router.get('/me', authMiddleware, async (req, res) => {
-  try {
-    const user = await User.findById(req.userId).select('-password');
-    if (!user) {
-      return res.status(404).json({ error: 'Usuário não encontrado.' });
-    }
+// Rotas protegidas
+router.get('/me', verifyToken1, getMe);
+router.put('/me', verifyToken1, updateMe);
+router.get('/balance', verifyToken1, getUserBalance);
 
-    res.json(user);
-  } catch (err) {
-    console.error('[ERRO] GET /me:', err.message);
-    res.status(500).json({ error: 'Erro interno ao buscar usuário.' });
-  }
-});
+// ✅ Coloque rotas específicas ANTES da rota genérica
+router.get('/inbox', verifyToken1, getInbox);
 
-/**
- * @route   PUT /api/users/me
- * @desc    Atualiza dados do perfil do usuário autenticado
- * @access  Privado
- */
-router.put('/me', authMiddleware, async (req, res) => {
-  const { profileImage, address } = req.body;
+// Enviar mensagem para outro usuário
+router.post('/:recipientId/message', verifyToken1, sendMessageToUser);
 
-  // Validação leve
-  if (!profileImage && !address) {
-    return res.status(400).json({ error: 'Nenhum dado enviado para atualização.' });
-  }
-
-  try {
-    const updates = {};
-    if (profileImage) updates.profileImage = profileImage;
-    if (address) updates.address = address;
-
-    const updatedUser = await User.findByIdAndUpdate(
-      req.userId,
-      updates,
-      { new: true, runValidators: true }
-    ).select('-password');
-
-    if (!updatedUser) {
-      return res.status(404).json({ error: 'Usuário não encontrado.' });
-    }
-
-    res.json(updatedUser);
-  } catch (err) {
-    console.error('[ERRO] PUT /me:', err.message);
-    res.status(500).json({ error: 'Erro ao atualizar perfil.' });
-  }
-});
+// Rota genérica deve ficar por último
+router.get('/:userId', getUserById);
 
 export default router;
